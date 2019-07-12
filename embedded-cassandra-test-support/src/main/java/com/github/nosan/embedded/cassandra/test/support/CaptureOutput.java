@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,128 +20,86 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import java.io.UncheckedIOException;
 
 /**
- * {@link TestRule} to capture output from {@code System.out} and {@code System.err}.
+ * {@code CaptureOutput} captures output to {@code System.out} and {@code System.err}.
  *
  * @author Dmytro Nosan
- * @since 1.0.0
+ * @since 1.4.2
  */
-public final class CaptureOutput implements TestRule {
+public final class CaptureOutput {
 
-	@Nullable
-	private TeeOutputStream out;
+	private final TeeOutputStream systemOut;
 
-	@Nullable
-	private TeeOutputStream err;
+	private final TeeOutputStream systemErr;
 
-	@Nullable
-	private ByteArrayOutputStream output;
+	private final ByteArrayOutputStream output;
 
-
-	@Override
-	public Statement apply(Statement base, Description description) {
-		return new Statement() {
-			@Override
-			public void evaluate() throws Throwable {
-				capture();
-				try {
-					base.evaluate();
-				}
-				finally {
-					release();
-				}
-			}
-		};
+	private CaptureOutput(TeeOutputStream systemOut, TeeOutputStream systemErr, ByteArrayOutputStream output) {
+		this.systemOut = systemOut;
+		this.systemErr = systemErr;
+		this.output = output;
 	}
-
-
-	@Override
-	@Nonnull
-	public String toString() {
-		flush();
-		ByteArrayOutputStream output = this.output;
-		if (output == null) {
-			return "";
-		}
-		return output.toString();
-	}
-
 
 	/**
-	 * Reset the current output.
+	 * Capture the  {@code System.out} and {@code System.err} outputs.
+	 *
+	 * @return the capture
 	 */
-	public void reset() {
-		ByteArrayOutputStream output = this.output;
-		if (output != null) {
-			flush();
-			output.reset();
-		}
-	}
-
-
-	/**
-	 * Flushes this output stream and forces any buffered output bytes to be written out.
-	 */
-	public void flush() {
-		try {
-
-			TeeOutputStream out = this.out;
-			if (out != null) {
-				out.flush();
-			}
-			TeeOutputStream err = this.err;
-			if (err != null) {
-				err.flush();
-			}
-		}
-		catch (IOException ignore) {
-		}
+	public static CaptureOutput capture() {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		TeeOutputStream systemOut = new TeeOutputStream(System.out, output);
+		TeeOutputStream systemErr = new TeeOutputStream(System.err, output);
+		System.setOut(new PrintStream(systemOut));
+		System.setErr(new PrintStream(systemErr));
+		return new CaptureOutput(systemOut, systemErr, output);
 	}
 
 	/**
-	 * Capture {@code System.out} and {@code System.err}.
-	 */
-	public void capture() {
-		this.output = new ByteArrayOutputStream();
-		this.out = new TeeOutputStream(System.out, this.output);
-		this.err = new TeeOutputStream(System.err, this.output);
-		System.setOut(new PrintStream(this.out));
-		System.setErr(new PrintStream(this.err));
-	}
-
-	/**
-	 * Release and flush {@code System.out} and {@code System.err}.
+	 * Release the  {@code System.out} and {@code System.err} outputs.
 	 */
 	public void release() {
-		TeeOutputStream out = this.out;
-		if (out != null) {
-			System.setOut(out.getOriginal());
-		}
-		TeeOutputStream err = this.err;
-		if (err != null) {
-			System.setErr(err.getOriginal());
-		}
-		this.output = null;
+		flush();
+		System.setOut(this.systemOut.getOriginal());
+		System.setErr(this.systemErr.getOriginal());
+		this.output.reset();
 	}
 
+	/**
+	 * Return all captured output to {@code System.out} and {@code System.err} as a single string.
+	 */
+	@Override
+	public String toString() {
+		flush();
+		return this.output.toString();
+	}
+
+	/**
+	 * Clean the current captured output.
+	 */
+	public void reset() {
+		flush();
+		this.output.reset();
+	}
+
+	private void flush() {
+		try {
+			this.systemOut.flush();
+			this.systemErr.flush();
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
 
 	private static final class TeeOutputStream extends OutputStream {
 
-		@Nonnull
 		private final PrintStream original;
 
-		@Nonnull
 		private final OutputStream delegate;
 
-		TeeOutputStream(@Nonnull PrintStream original, @Nonnull OutputStream delegate) {
+		TeeOutputStream(PrintStream original, OutputStream delegate) {
 			this.original = original;
 			this.delegate = delegate;
 		}
@@ -153,12 +111,12 @@ public final class CaptureOutput implements TestRule {
 		}
 
 		@Override
-		public void write(@Nonnull byte[] b) throws IOException {
+		public void write(byte[] b) throws IOException {
 			write(b, 0, b.length);
 		}
 
 		@Override
-		public void write(@Nonnull byte[] b, int off, int len) throws IOException {
+		public void write(byte[] b, int off, int len) throws IOException {
 			this.delegate.write(b, off, len);
 			this.original.write(b, off, len);
 		}
@@ -169,10 +127,10 @@ public final class CaptureOutput implements TestRule {
 			this.original.flush();
 		}
 
-		@Nonnull
 		PrintStream getOriginal() {
 			return this.original;
 		}
+
 	}
 
 }

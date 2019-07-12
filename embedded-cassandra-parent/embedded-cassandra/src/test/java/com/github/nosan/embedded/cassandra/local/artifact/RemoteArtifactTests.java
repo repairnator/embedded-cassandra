@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,209 +16,211 @@
 
 package com.github.nosan.embedded.cassandra.local.artifact;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.Proxy;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.UUID;
-
-import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.stream.Stream;
 
 import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.github.nosan.embedded.cassandra.Version;
 import com.github.nosan.embedded.cassandra.test.support.CaptureOutput;
-import com.github.nosan.embedded.cassandra.test.support.CauseMatcher;
-import com.github.nosan.embedded.cassandra.test.support.WebServer;
-import com.github.nosan.embedded.cassandra.util.OS;
+import com.github.nosan.embedded.cassandra.test.support.CaptureOutputExtension;
+import com.github.nosan.embedded.cassandra.test.support.HttpServerExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link RemoteArtifact}.
  *
  * @author Dmytro Nosan
  */
-public class RemoteArtifactTests {
+@SuppressWarnings({"NullableProblems", "ConstantConditions"})
+@ExtendWith({HttpServerExtension.class, CaptureOutputExtension.class})
+class RemoteArtifactTests {
 
-	@Rule
-	public WebServer webServer = new WebServer();
-
-	@Rule
-	public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-	@Rule
-	public CaptureOutput output = new CaptureOutput();
-
-	@Rule
-	public ExpectedException throwable = ExpectedException.none();
+	private static final Version VERSION = Version.parse("3.1.1");
 
 	private RemoteArtifactFactory factory;
 
-	@Before
-	public void setUp() throws Exception {
-		Path directory = this.temporaryFolder.newFolder().toPath().resolve(UUID.randomUUID().toString());
+	private HttpServer httpServer;
+
+	private CaptureOutput output;
+
+	@BeforeEach
+	void setUp(HttpServer httpServer, CaptureOutput output) {
 		this.factory = new RemoteArtifactFactory();
-		this.factory.setUrlFactory(version -> {
-			HttpServer server = this.webServer.get();
-			return new URL[]{
-					new URL(String.format("http:/%s/dist/apache-cassandra-%s.zip", server.getAddress(), version))};
-		});
-		this.factory.setDirectory(directory);
+		this.factory.setUrlFactory(version -> new URL[]{
+				new URL(String.format("http:/%s/dist/apache-cassandra-%s.zip", httpServer.getAddress(), version))});
+		this.output = output;
+		this.httpServer = httpServer;
 
 	}
 
 	@Test
-	public void shouldNotWorkDirectoryIsFile() throws Exception {
-		this.throwable.expect(IllegalArgumentException.class);
-		this.throwable.expectMessage("exists and is a file");
-		this.factory.setDirectory(this.temporaryFolder.newFile().toPath());
-		this.factory.create(new Version(3, 11, 3)).get();
-	}
-
-
-	@Test
-	public void shouldNotWorkDirectoryNotWritable() throws Exception {
-		if (!OS.isWindows()) {
-			this.throwable.expect(IllegalArgumentException.class);
-			this.throwable.expectMessage("is not writable");
-			File file = this.temporaryFolder.newFolder();
-			assertThat(file.setReadOnly()).describedAs("setReadOnly").isTrue();
-			this.factory.setDirectory(file.toPath());
-			this.factory.create(new Version(3, 11, 3)).get();
-		}
-	}
-
-	@Test
-	public void shouldDownloadArtifactIfNotExistsShowProgress() throws Exception {
-		HttpServer server = this.webServer.get();
+	void shouldDownloadArtifactProgress() throws Exception {
 		byte[] content;
 		try (InputStream inputStream = getClass().getResourceAsStream("/apache-cassandra-3.11.3.zip")) {
 			content = IOUtils.toByteArray(inputStream);
 		}
-		server.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
 			exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, content.length);
-			sleep(500);
-			exchange.getResponseBody().write(content);
+			for (int i = 0; i < content.length; i += 8192) {
+				exchange.getResponseBody().write(content, i, Math.min(8192, content.length - i));
+				sleep(100);
+			}
 			exchange.close();
 		});
-		Artifact artifact = this.factory.create(new Version(3, 1, 1));
-		Path archive = artifact.get();
+		Artifact artifact = this.factory.create(VERSION);
+		Path archive = artifact.getArchive();
 		assertThat(this.output.toString()).contains("Downloaded");
-		assertThat(archive).exists().hasParent(this.factory.getDirectory());
-		assertThat(archive).hasFileName("apache-cassandra-3.1.1.zip");
+		assertThat(archive).exists();
+		assertThat(archive.toString()).endsWith("apache-cassandra-3.1.1.zip");
 		assertThat(archive).hasBinaryContent(content);
 
 	}
 
-
 	@Test
-	public void shouldDownloadArtifactIfNotExistsNoProgress() throws Exception {
-		HttpServer server = this.webServer.get();
+	void shouldDownloadArtifactNoProgress() throws Exception {
 		byte[] content;
 		try (InputStream inputStream = getClass().getResourceAsStream("/apache-cassandra-3.11.3.zip")) {
 			content = IOUtils.toByteArray(inputStream);
 		}
-		server.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
 			exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, 0);
 			exchange.getResponseBody().write(content);
 			exchange.close();
 		});
-		Artifact artifact = this.factory.create(new Version(3, 1, 1));
-		Path archive = artifact.get();
+		Artifact artifact = this.factory.create(VERSION);
+		Path archive = artifact.getArchive();
 		assertThat(this.output.toString()).doesNotContain("Downloaded");
-		assertThat(archive).exists().hasParent(this.factory.getDirectory());
-		assertThat(archive).hasFileName("apache-cassandra-3.1.1.zip");
+		assertThat(archive).exists();
+		assertThat(archive.toString()).endsWith("apache-cassandra-3.1.1.zip");
 		assertThat(archive).hasBinaryContent(content);
-
 	}
 
-
 	@Test
-	public void shouldNotDownloadArtifactIfExists() throws Exception {
-		this.factory.setDirectory(Paths.get(ClassLoader.getSystemResource("").toURI()));
-		Artifact artifact = this.factory.create(new Version(3, 11, 3));
-		Path archive = artifact.get();
+	void shouldDownloadArtifactUsingRedirection() throws Exception {
+		byte[] content;
+		try (InputStream inputStream = getClass().getResourceAsStream("/apache-cassandra-3.11.3.zip")) {
+			content = IOUtils.toByteArray(inputStream);
+		}
+		this.httpServer.createContext("/apache-cassandra-3.1.1.zip", exchange -> {
+			exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, 0);
+			exchange.getResponseBody().write(content);
+			exchange.close();
+		});
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+			exchange.getResponseHeaders().put("Location", Collections.singletonList("/apache-cassandra-3.1.1.zip"));
+			exchange.sendResponseHeaders(HttpURLConnection.HTTP_MOVED_PERM, 0);
+			exchange.close();
+		});
+		Artifact artifact = this.factory.create(VERSION);
+		Path archive = artifact.getArchive();
 		assertThat(this.output.toString()).doesNotContain("Downloaded");
-		assertThat(this.output.toString()).doesNotContain("It takes a while...");
-		assertThat(archive).exists().hasParent(this.factory.getDirectory());
-		assertThat(archive).hasFileName("apache-cassandra-3.11.3.zip");
+		assertThat(archive).exists();
+		assertThat(archive.toString()).endsWith("apache-cassandra-3.1.1.zip");
+		assertThat(archive).hasBinaryContent(content);
 	}
 
 	@Test
-	public void readTimeoutIsExceeded() throws Exception {
-		HttpServer server = this.webServer.get();
-		server.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
-			sleep(1200);
+	void shouldNotDownloadArtifactMaxRedirection() {
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+			exchange.getResponseHeaders()
+					.put("Location", Collections.singletonList("/dist/apache-cassandra-3.1.1.zip"));
+			exchange.sendResponseHeaders(HttpURLConnection.HTTP_MOVED_PERM, 0);
+			exchange.close();
 		});
-
-		this.throwable.expect(IOException.class);
-		this.throwable.expectMessage("There is no way to download archive");
-		this.throwable.expectCause(new CauseMatcher(SocketTimeoutException.class, "Read timed out"));
-
-		this.factory.setReadTimeout(Duration.ofSeconds(1));
-		this.factory.create(new Version(3, 1, 1)).get();
+		Artifact artifact = this.factory.create(VERSION);
+		assertThatThrownBy(artifact::getArchive).hasStackTraceContaining("Too many redirects for URL");
 	}
 
 	@Test
-	public void connectTimeoutIsExceeded() throws Exception {
-		this.factory.setUrlFactory(new UrlFactory() {
-			@Nonnull
-			@Override
-			public URL[] create(@Nonnull Version version) throws MalformedURLException {
-				return new URL[]{new URL("http://example.com:81/apache-cassandra-3.1.1.zip")};
-			}
+	void shouldDownloadArtifactFromMultiplyUrls() throws Exception {
+		byte[] content;
+		try (InputStream inputStream = getClass().getResourceAsStream("/apache-cassandra-3.11.3.zip")) {
+			content = IOUtils.toByteArray(inputStream);
+		}
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+			exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, 0);
+			exchange.getResponseBody().write(content);
+			exchange.close();
 		});
+		UrlFactory delegate = this.factory.getUrlFactory();
+		this.factory.setUrlFactory(version -> Stream
+				.concat(Stream.of(new URL(String.format("http:/%s/cassandra.zip", this.httpServer.getAddress()))),
+						Arrays.stream((delegate).create(version))).toArray(URL[]::new));
+		Artifact artifact = this.factory.create(VERSION);
+		Path archive = artifact.getArchive();
+		assertThat(this.output.toString()).doesNotContain("Downloaded");
+		assertThat(archive).exists();
+		assertThat(archive.toString()).endsWith("apache-cassandra-3.1.1.zip");
+		assertThat(archive).hasBinaryContent(content);
+	}
 
-		this.throwable.expect(IOException.class);
-		this.throwable.expectMessage("There is no way to download archive");
-		this.throwable.expectCause(new CauseMatcher(SocketTimeoutException.class, "connect timed out"));
+	@Test
+	void shouldNotDownloadArtifactNotFound() {
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> {
+			exchange.sendResponseHeaders(404, 0);
+			exchange.close();
+		});
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.hasStackTraceContaining("HTTP (404 Not Found) status for URL");
+	}
 
+	@Test
+	void shouldNotDownloadArtifactNoURLs() {
+		this.factory.setUrlFactory(version -> new URL[0]);
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.isInstanceOf(IOException.class);
+	}
+
+	@Test
+	void shouldNotDownloadArtifactReadTimeout() {
+		this.httpServer.createContext("/dist/apache-cassandra-3.1.1.zip", exchange -> sleep(600));
+
+		this.factory.setReadTimeout(Duration.ofMillis(200));
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.hasStackTraceContaining("Read timed out");
+	}
+
+	@Test
+	void shouldNotDownloadArtifactConnectionTimeout() {
+		this.factory.setUrlFactory(version -> new URL[]{new URL("http://example.com:81/apache-cassandra-3.1.1.zip")});
 		this.factory.setConnectTimeout(Duration.ofSeconds(1));
-		this.factory.create(new Version(3, 1, 1)).get();
+
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.hasStackTraceContaining("connect timed out");
 	}
 
 	@Test
-	public void proxyIsInvalid() throws Exception {
-
-
-		this.throwable.expect(IOException.class);
-		this.throwable.expectMessage("There is no way to download archive");
-		this.throwable.expectCause(new CauseMatcher(SocketException.class, "Connection refused"));
-
+	void shouldNotDownloadArtifactInvalidProxy() {
 		this.factory.setProxy(new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(1111)));
-		this.factory.create(new Version(3, 1, 1)).get();
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.hasStackTraceContaining("Connection refused");
 
 	}
 
 	@Test
-	public void urlDoesNotHaveFileName() throws Exception {
-		this.throwable.expect(IllegalArgumentException.class);
-		this.throwable.expectMessage("There is no way to determine");
-
-		this.factory.setUrlFactory(new UrlFactory() {
-			@Nonnull
-			@Override
-			public URL[] create(@Nonnull Version version) throws MalformedURLException {
-				return new URL[]{new URL("http://localhost:8080/")};
-			}
-		});
-		this.factory.create(new Version(3, 1, 1)).get();
+	void shouldNotDownloadArtifactNoFileName() {
+		this.httpServer.createContext("/", exchange -> exchange.sendResponseHeaders(200, 0));
+		this.factory.setUrlFactory(version -> new URL[]{new URL(String
+				.format("http://%s:%d/", this.httpServer.getAddress().getHostName(),
+						this.httpServer.getAddress().getPort()))});
+		assertThatThrownBy(() -> this.factory.create(VERSION).getArchive())
+				.hasStackTraceContaining("There is no way to determine");
 
 	}
 
@@ -227,10 +229,9 @@ public class RemoteArtifactTests {
 			Thread.sleep(timeout);
 		}
 		catch (InterruptedException ex) {
-			throw new IllegalStateException(ex);
+			Thread.currentThread().interrupt();
 		}
 
 	}
-
 
 }

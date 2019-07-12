@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,49 +23,47 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
 
 /**
  * {@link CqlScript} implementation for {@link Path}.
  *
  * @author Dmytro Nosan
+ * @see CqlScript#paths(Path...)
  * @since 1.0.0
  */
 public final class PathCqlScript extends AbstractCqlResourceScript {
 
-	@Nonnull
-	private final Path location;
+	private final Path path;
 
 	/**
 	 * Create a new {@link PathCqlScript} based on a Path.
 	 *
-	 * @param location a Path
+	 * @param path a Path
 	 */
-	public PathCqlScript(@Nonnull Path location) {
-		this(location, null);
+	public PathCqlScript(Path path) {
+		this(path, null);
 	}
 
 	/**
 	 * Create a new {@link PathCqlScript} based on a Path.
 	 *
-	 * @param location a path
+	 * @param path a path
 	 * @param encoding encoding the encoding to use for reading from the resource
 	 */
-	public PathCqlScript(@Nonnull Path location, @Nullable Charset encoding) {
+	public PathCqlScript(Path path, @Nullable Charset encoding) {
 		super(encoding);
-		this.location = Objects.requireNonNull(location, "Location must not be null");
+		this.path = Objects.requireNonNull(path, "Path must not be null");
 	}
 
-	@Nonnull
 	@Override
 	protected InputStream getInputStream() throws IOException {
-		return Files.newInputStream(this.location);
+		return Files.newInputStream(this.path);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.location, getEncoding());
+		return Objects.hash(this.path, getEncoding());
 	}
 
 	@Override
@@ -77,13 +75,12 @@ public final class PathCqlScript extends AbstractCqlResourceScript {
 			return false;
 		}
 		PathCqlScript that = (PathCqlScript) other;
-		return Objects.equals(this.location, that.location)
-				&& Objects.equals(getEncoding(), that.getEncoding());
+		return Objects.equals(this.path, that.path) && Objects.equals(getEncoding(), that.getEncoding());
 	}
 
 	@Override
-	@Nonnull
 	public String toString() {
-		return String.valueOf(this.location);
+		return String.valueOf(this.path);
 	}
+
 }

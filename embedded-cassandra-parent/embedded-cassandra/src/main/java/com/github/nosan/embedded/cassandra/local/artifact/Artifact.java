@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,8 +19,6 @@ package com.github.nosan.embedded.cassandra.local.artifact;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import javax.annotation.Nonnull;
-
 /**
  * The artifact is hidden the underlying {@code archive} file.
  *
@@ -31,11 +29,11 @@ import javax.annotation.Nonnull;
 public interface Artifact {
 
 	/**
-	 * Returns a {@code Path} to Cassandra {@code archive (tar.gz, .zip, etc...)}.
+	 * Returns a {@code path} to the archive file.
 	 *
-	 * @return Cassandra {@code archive} file
+	 * @return path to the {@code archive} file
 	 * @throws IOException in the case of I/O errors
 	 */
-	@Nonnull
-	Path get() throws IOException;
+	Path getArchive() throws IOException;
+
 }

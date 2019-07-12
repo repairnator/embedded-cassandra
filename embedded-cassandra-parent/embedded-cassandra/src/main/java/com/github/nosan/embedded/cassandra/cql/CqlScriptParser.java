@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,9 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
 import com.github.nosan.embedded.cassandra.util.StringUtils;
 
 /**
@@ -33,96 +31,96 @@ import com.github.nosan.embedded.cassandra.util.StringUtils;
  */
 public abstract class CqlScriptParser {
 
-	private static final char SINGLE_QUOTE = '\'';
-
-	private static final char DOUBLE_QUOTE = '"';
-
-	private static final char STATEMENT = ';';
-
-	private static final char LINE_SEPARATOR = '\n';
-
-	private static final String SINGLE_DASH_COMMENT = "--";
-
-	private static final String SINGLE_SLASH_COMMENT = "//";
-
-	private static final String BLOCK_START_COMMENT = "/*";
-
-	private static final String BLOCK_END_COMMENT = "*/";
-
 	/**
-	 * Parses script into the statements.
+	 * Parses the given script into the statements. Statements end in a semicolon
+	 * <b>statement1;statement...;statementN</b>. This method does not validate the given {@code CQL} script, just only
+	 * tries to split it into the statements.
 	 *
 	 * @param script CQL script.
 	 * @return CQL statements
 	 */
-	@Nonnull
 	public static List<String> parse(@Nullable String script) {
-		if (!StringUtils.hasText(script)) {
-			return Collections.emptyList();
-		}
-		List<String> statements = new ArrayList<>();
-		StringBuilder result = new StringBuilder();
-
-		boolean singleQuote = false;
-		boolean doubleQuote = false;
-
-		for (int index = 0; index < script.length(); index++) {
-
-			char c = script.charAt(index);
-
-			// quotes...
-			if (c == SINGLE_QUOTE && !doubleQuote) {
-				singleQuote = !singleQuote;
-			}
-			else if (c == DOUBLE_QUOTE && !singleQuote) {
-				doubleQuote = !doubleQuote;
-			}
-
-			if (!singleQuote && !doubleQuote) {
-				// single comments
-				if (script.startsWith(SINGLE_DASH_COMMENT, index)
-						|| script.startsWith(SINGLE_SLASH_COMMENT, index)) {
-					if (script.indexOf(LINE_SEPARATOR, index) < 0) {
-						break;
-					}
-					index = script.indexOf(LINE_SEPARATOR, index);
-					continue;
-				}
-				// block comment
-				else if (script.startsWith(BLOCK_START_COMMENT, index)) {
-					if (script.indexOf(BLOCK_END_COMMENT, index) < 0) {
-						throw new IllegalArgumentException(String.format("Missing block comment (%s)",
-								BLOCK_END_COMMENT));
-					}
-					index = script.indexOf(BLOCK_END_COMMENT, index) + 1;
-					continue;
-				}
-				else if (c == STATEMENT) {
-					if (StringUtils.hasText(result)) {
-						statements.add(result.toString());
-						result = new StringBuilder();
-					}
-					index = script.indexOf(STATEMENT, index);
-					continue;
-				}
-				else if (c == '\n' || c == '\r' || c == '\t' || c == ' ') {
-					if (StringUtils.isEmpty(result) || last(result) == ' ') {
-						continue;
-					}
-					c = ' ';
-				}
-			}
-			result.append(c);
-		}
-		if (StringUtils.hasText(result)) {
-			statements.add(result.toString());
-		}
-		return statements;
-
+		return StringUtils.hasText(script) ? parseScript(script) : Collections.emptyList();
 	}
 
-	private static char last(StringBuilder result) {
-		return result.charAt(result.length() - 1);
+	private static List<String> parseScript(String script) {
+		List<String> statements = new ArrayList<>();
+		StringBuilder statement = new StringBuilder();
+		boolean singleQuoteEscape = false;
+		boolean doubleQuoteEscape = false;
+		boolean doubleDollarEscape = false;
+		int length = script.length();
+		int index = 0;
+		while (index < length) {
+			char c = getChar(script, index);
+			if (!doubleQuoteEscape && !doubleDollarEscape && c == '\'') {
+				statement.append('\'');
+				singleQuoteEscape = !singleQuoteEscape;
+				index++;
+				continue;
+			}
+			if (!singleQuoteEscape && !doubleDollarEscape && c == '"') {
+				statement.append('"');
+				doubleQuoteEscape = !doubleQuoteEscape;
+				index++;
+				continue;
+			}
+			if (!singleQuoteEscape && !doubleQuoteEscape && script.startsWith("$$", index)) {
+				statement.append("$$");
+				doubleDollarEscape = !doubleDollarEscape;
+				index += 2;
+				continue;
+			}
+			if (!singleQuoteEscape && !doubleQuoteEscape && !doubleDollarEscape) {
+				if (script.startsWith("--", index) || script.startsWith("//", index)) {
+					if (script.indexOf('\n', index) < 0) {
+						break;
+					}
+					index = script.indexOf('\n', index) + 1;
+					continue;
+				}
+				if (script.startsWith("/*", index)) {
+					if (script.indexOf("*/", index) < 0) {
+						throw new IllegalArgumentException("Missing end block comment '*/'");
+					}
+					index = script.indexOf("*/", index) + 2;
+					continue;
+				}
+				if (c == ';') {
+					addStatement(statement, statements);
+					index++;
+					continue;
+				}
+				if (c == ' ' && isSpaceBefore(statement)) {
+					index++;
+					continue;
+				}
+			}
+			statement.append(c);
+			index++;
+		}
+		addStatement(statement, statements);
+		return Collections.unmodifiableList(statements);
+	}
+
+	private static void addStatement(StringBuilder statement, List<String> statements) {
+		if (StringUtils.hasText(statement)) {
+			statements.add(statement.toString().trim());
+		}
+		statement.delete(0, statement.length());
+	}
+
+	private static char getChar(String script, int index) {
+		char c = script.charAt(index);
+		if (c == '\r' || c == '\t' || c == '\n') {
+			return ' ';
+		}
+		return c;
+	}
+
+	private static boolean isSpaceBefore(StringBuilder statement) {
+		return StringUtils.hasLength(statement) && statement.charAt(statement.length() - 1) == ' ';
 	}
 
 }
+

@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,27 +18,19 @@ package com.github.nosan.embedded.cassandra.local.artifact;
 
 import java.net.Proxy;
 import java.net.URL;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.github.nosan.embedded.cassandra.Version;
-import com.github.nosan.embedded.cassandra.util.FileUtils;
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
 
 /**
- * {@link ArtifactFactory} to create a remote {@link Artifact}.
+ * {@link ArtifactFactory} to create a {@link RemoteArtifact}.
  *
  * @author Dmytro Nosan
- * @see RemoteArtifactFactoryBuilder
  * @since 1.0.0
  */
-public final class RemoteArtifactFactory implements ArtifactFactory {
-
-	@Nullable
-	private Path directory;
+public class RemoteArtifactFactory implements ArtifactFactory {
 
 	@Nullable
 	private UrlFactory urlFactory;
@@ -53,28 +45,7 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	private Duration connectTimeout;
 
 	/**
-	 * The directory where {@link Artifact} should save an artifact({@code archive}) from
-	 * {@link UrlFactory#create(Version) URL}. <p>Default directory is: {@link FileUtils#getUserHomeDirectory()
-	 * user.home}
-	 *
-	 * @return The value of the {@code directory} attribute
-	 */
-	@Nullable
-	public Path getDirectory() {
-		return this.directory;
-	}
-
-	/**
-	 * Initializes the value for the {@link RemoteArtifactFactory#getDirectory() directory} attribute.
-	 *
-	 * @param directory The value for directory
-	 */
-	public void setDirectory(@Nullable Path directory) {
-		this.directory = directory;
-	}
-
-	/**
-	 * Set factory that creates {@link URL}.
+	 * Factory that creates {@link URL URLs} for downloading an archive.
 	 *
 	 * @return The value of the {@code urlFactory} attribute
 	 */
@@ -84,9 +55,10 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	}
 
 	/**
-	 * Initializes the value for the {@link RemoteArtifactFactory#getUrlFactory() urlFactory} attribute.
+	 * Initializes the value for the {@link RemoteArtifactFactory#getUrlFactory()} attribute.
 	 *
 	 * @param urlFactory The value for urlFactory
+	 * @see DefaultUrlFactory
 	 */
 	public void setUrlFactory(@Nullable UrlFactory urlFactory) {
 		this.urlFactory = urlFactory;
@@ -103,7 +75,7 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	}
 
 	/**
-	 * Initializes the value for the {@link RemoteArtifactFactory#getProxy() proxy} attribute.
+	 * Initializes the value for the {@link RemoteArtifactFactory#getProxy()} attribute.
 	 *
 	 * @param proxy The value for proxy
 	 */
@@ -122,7 +94,7 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	}
 
 	/**
-	 * Initializes the value for the {@link RemoteArtifactFactory#getReadTimeout() readTimeout} attribute.
+	 * Initializes the value for the {@link RemoteArtifactFactory#getReadTimeout()} attribute.
 	 *
 	 * @param readTimeout The value for readTimeout
 	 */
@@ -131,8 +103,7 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	}
 
 	/**
-	 * Connection timeout to be used when opening a communications link to the resource referenced
-	 * by URLConnection.
+	 * Connection timeout to be used when opening a communications link to the resource referenced by URLConnection.
 	 *
 	 * @return The value of the {@code connectTimeout} attribute
 	 */
@@ -142,7 +113,7 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 	}
 
 	/**
-	 * Initializes the value for the {@link RemoteArtifactFactory#getConnectTimeout() connectTimeout} attribute.
+	 * Initializes the value for the {@link RemoteArtifactFactory#getConnectTimeout()} attribute.
 	 *
 	 * @param connectTimeout The value for connectTimeout
 	 */
@@ -150,20 +121,22 @@ public final class RemoteArtifactFactory implements ArtifactFactory {
 		this.connectTimeout = connectTimeout;
 	}
 
-	@Nonnull
 	@Override
-	public Artifact create(@Nonnull Version version) {
+	public Artifact create(Version version) {
 		Objects.requireNonNull(version, "Version must not be null");
-		Path directory = getDirectory();
-		if (directory == null) {
-			directory = FileUtils.getUserHomeDirectory();
-		}
 		UrlFactory urlFactory = getUrlFactory();
 		if (urlFactory == null) {
 			urlFactory = new DefaultUrlFactory();
 		}
-		return new RemoteArtifact(version, directory, urlFactory,
-				getProxy(), getReadTimeout(), getConnectTimeout());
+		Duration readTimeout = getReadTimeout();
+		if (readTimeout == null) {
+			readTimeout = Duration.ofSeconds(30);
+		}
+		Duration connectTimeout = getConnectTimeout();
+		if (connectTimeout == null) {
+			connectTimeout = Duration.ofSeconds(30);
+		}
+		return new RemoteArtifact(version, urlFactory, getProxy(), readTimeout, connectTimeout);
 	}
 
 }

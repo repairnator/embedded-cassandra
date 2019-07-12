@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,127 +19,96 @@ package com.github.nosan.embedded.cassandra.cql;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collection;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * CQL Script that abstracts from the actual type of underlying source.
  *
  * @author Dmytro Nosan
- * @see AbstractCqlScript
- * @see AbstractCqlResourceScript
  * @see CqlScripts
- * @see UrlCqlScript
+ * @see CqlStatements
  * @see ClassPathCqlScript
- * @see StaticCqlScript
+ * @see ClassPathPatternCqlScript
  * @see FileCqlScript
  * @see PathCqlScript
- * @see InputStreamCqlScript
+ * @see UrlCqlScript
  * @since 1.0.0
  */
 @FunctionalInterface
 public interface CqlScript {
-	/**
-	 * Return CQL Statements.
-	 *
-	 * @return CQL statements.
-	 */
-	@Nonnull
-	Collection<String> getStatements();
 
 	/**
-	 * Factory method to create {@link CqlScripts} based on classpath locations.
+	 * Factory method that creates {@link CqlScript} based on classpath {@code 'glob'} patterns.
 	 *
-	 * @param locations classpath locations
-	 * @return CQL script
+	 * @param patterns classpath glob patterns
+	 * @return CQL scripts
+	 * @see ClassPathPatternCqlScript
+	 * @since 1.2.6
 	 */
-	@Nonnull
-	static CqlScript classpath(@Nullable String... locations) {
-		if (locations == null || locations.length == 0) {
-			return new CqlScripts();
-		}
-		return new CqlScripts(Arrays.stream(locations)
-				.map(ClassPathCqlScript::new)
-				.toArray(CqlScript[]::new));
+	static CqlScript classpathPatterns(String... patterns) {
+		return CqlScriptFactory.create(patterns, ClassPathPatternCqlScript::new);
 	}
 
 	/**
-	 * Factory method to create {@link CqlScripts} based on classpath locations.
+	 * Factory method that creates {@link CqlScript} based on classpath locations.
 	 *
 	 * @param locations classpath locations
-	 * @param contextClass the class to load the resource with.
-	 * @return CQL script
+	 * @return CQL scripts
+	 * @see ClassPathCqlScript
 	 */
-	@Nonnull
-	static CqlScript classpath(@Nullable Class<?> contextClass, @Nullable String... locations) {
-		if (locations == null || locations.length == 0) {
-			return new CqlScripts();
-		}
-		return new CqlScripts(Arrays.stream(locations)
-				.map(l -> new ClassPathCqlScript(l, contextClass))
-				.toArray(CqlScript[]::new));
+	static CqlScript classpath(String... locations) {
+		return CqlScriptFactory.create(locations, ClassPathCqlScript::new);
 	}
 
 	/**
-	 * Factory method to create {@link CqlScripts} based on urls.
+	 * Factory method that creates {@link CqlScript} based on {@link URL}.
 	 *
 	 * @param locations URL locations
-	 * @return CQL script
+	 * @return CQL scripts
+	 * @see UrlCqlScript
 	 */
-	@Nonnull
-	static CqlScript urls(@Nullable URL... locations) {
-		if (locations == null || locations.length == 0) {
-			return new CqlScripts();
-		}
-		return new CqlScripts(Arrays.stream(locations)
-				.map(UrlCqlScript::new)
-				.toArray(CqlScript[]::new));
+	static CqlScript urls(URL... locations) {
+		return CqlScriptFactory.create(locations, UrlCqlScript::new);
 	}
 
 	/**
-	 * Factory method to create {@link CqlScripts} based on files.
+	 * Factory method that creates {@link CqlScript} based on {@link File}.
 	 *
 	 * @param locations File locations
-	 * @return CQL script
+	 * @return CQL scripts
+	 * @see FileCqlScript
 	 */
-	@Nonnull
-	static CqlScript files(@Nullable File... locations) {
-		if (locations == null || locations.length == 0) {
-			return new CqlScripts();
-		}
-		return new CqlScripts(Arrays.stream(locations)
-				.map(FileCqlScript::new)
-				.toArray(CqlScript[]::new));
+	static CqlScript files(File... locations) {
+		return CqlScriptFactory.create(locations, FileCqlScript::new);
 	}
 
 	/**
-	 * Factory method to create {@link CqlScripts} based on paths.
+	 * Factory method that creates {@link CqlScript} based on {@link Path}.
 	 *
 	 * @param locations Path locations
-	 * @return CQL script
+	 * @return CQL scripts
+	 * @see PathCqlScript
 	 */
-	@Nonnull
-	static CqlScript paths(@Nullable Path... locations) {
-		if (locations == null || locations.length == 0) {
-			return new CqlScripts();
-		}
-		return new CqlScripts(Arrays.stream(locations)
-				.map(PathCqlScript::new)
-				.toArray(CqlScript[]::new));
+	static CqlScript paths(Path... locations) {
+		return CqlScriptFactory.create(locations, PathCqlScript::new);
 	}
 
 	/**
-	 * Factory method to create {@link StaticCqlScript} based on statements.
+	 * Factory method that creates {@link CqlScript} based on statements.
 	 *
 	 * @param statements CQL statements
-	 * @return CQL script
+	 * @return CQL scripts
+	 * @see CqlStatements
 	 */
-	@Nonnull
-	static CqlScript statements(@Nullable String... statements) {
-		return new StaticCqlScript(statements);
+	static CqlScript statements(String... statements) {
+		return new CqlStatements(statements);
 	}
+
+	/**
+	 * Returns CQL Statements.
+	 *
+	 * @return CQL statements to execute.
+	 */
+	List<String> getStatements();
 
 }

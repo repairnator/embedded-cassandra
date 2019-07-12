@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
+
 <!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.2//EN"
         "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
 <module name="com.puppycrawl.tools.checkstyle.Checker">
-    <!-- Root Checks -->
     <module name="com.puppycrawl.tools.checkstyle.checks.header.RegexpHeaderCheck">
         <property name="headerFile" value="${checkstyle.header.file}"/>
         <property name="fileExtensions" value="java"/>
@@ -11,9 +11,7 @@
         <property name="lineSeparator" value="lf"/>
     </module>
 
-    <!-- TreeWalker Checks -->
     <module name="com.puppycrawl.tools.checkstyle.TreeWalker">
-        <!-- Annotations -->
         <module name="com.puppycrawl.tools.checkstyle.checks.annotation.AnnotationUseStyleCheck">
             <property name="elementStyle" value="compact"/>
         </module>
@@ -23,13 +21,19 @@
             <property name="allowSamelineSingleParameterlessAnnotation"
                       value="false"/>
         </module>
-
+        <module name="OperatorWrap"/>
         <module name="LineLength">
             <property name="max" value="120"/>
             <property name="tabWidth" value="4"/>
         </module>
 
-        <!-- Block Checks -->
+        <module name="StringLiteralEquality"/>
+
+        <module name="EmptyLineSeparator">
+            <property name="allowMultipleEmptyLines" value="false"/>
+            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
+        </module>
+
         <module name="com.puppycrawl.tools.checkstyle.checks.blocks.EmptyBlockCheck">
             <property name="option" value="text"/>
         </module>
@@ -40,7 +44,6 @@
         <module name="com.puppycrawl.tools.checkstyle.checks.blocks.NeedBracesCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.blocks.AvoidNestedBlocksCheck"/>
 
-        <!-- Class Design -->
         <module name="com.puppycrawl.tools.checkstyle.checks.design.FinalClassCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.design.InterfaceIsTypeCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.design.HideUtilityClassConstructorCheck"/>
@@ -48,7 +51,6 @@
         <module name="com.puppycrawl.tools.checkstyle.checks.design.InnerTypeLastCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.design.OneTopLevelClassCheck"/>
 
-        <!-- Coding -->
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.CovariantEqualsCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.EmptyStatementCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.EqualsHashCodeCheck"/>
@@ -66,17 +68,17 @@
             <property name="max" value="3"/>
         </module>
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.MultipleVariableDeclarationsCheck"/>
+        <module name="com.puppycrawl.tools.checkstyle.checks.coding.DeclarationOrderCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.RequireThisCheck">
             <property name="checkMethods" value="false"/>
             <property name="validateOnlyOverlapping" value="false"/>
         </module>
         <module name="com.puppycrawl.tools.checkstyle.checks.coding.OneStatementPerLineCheck"/>
 
-        <!-- Imports -->
         <module name="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStaticImportCheck">
             <property name="excludes"
-                      value="org.assertj.core.api.Assertions.*, org.junit.Assert.*, org.junit.Assume.*, org.junit.internal.matchers.ThrowableMessageMatcher.*, org.hamcrest.CoreMatchers.*, org.hamcrest.Matchers.*, org.mockito.Mockito.*, org.mockito.BDDMockito.*, org.mockito.Matchers.*, org.mockito.ArgumentMatchers.*"/>
+                      value="org.assertj.core.api.Assertions.*, org.junit.jupiter.params.provider.Arguments.*"/>
         </module>
         <module name="com.puppycrawl.tools.checkstyle.checks.imports.IllegalImportCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.imports.RedundantImportCheck"/>
@@ -91,9 +93,9 @@
             <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
 
-        <!-- Javadoc Comments -->
         <module name="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTypeCheck">
             <property name="scope" value="package"/>
+            <property name="excludeScope" value="anoninner"/>
             <property name="authorFormat" value=".+\s.+"/>
         </module>
         <module name="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck">
@@ -117,10 +119,9 @@
         <module name="com.puppycrawl.tools.checkstyle.checks.javadoc.AtclauseOrderCheck">
             <property name="target" value="METHOD_DEF, CTOR_DEF, VARIABLE_DEF"/>
             <property name="tagOrder"
-                      value="@param, @return, @throws, @since, @deprecated, @see"/>
+                      value="@param, @return, @throws, @see, @since, @deprecated"/>
         </module>
 
-        <!-- Miscellaneous -->
         <module name="com.puppycrawl.tools.checkstyle.checks.indentation.CommentsIndentationCheck">
             <property name="tokens" value="BLOCK_COMMENT_BEGIN"/>
         </module>
@@ -128,10 +129,9 @@
         <module name="com.puppycrawl.tools.checkstyle.checks.ArrayTypeStyleCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.OuterTypeFilenameCheck"/>
 
-        <!-- Modifiers -->
         <module name="com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck"/>
+        <module name="com.puppycrawl.tools.checkstyle.checks.modifier.ModifierOrderCheck"/>
 
-        <!-- Regexp -->
         <module name="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineJavaCheck">
             <property name="format" value="^\t* +\t*\S"/>
             <property name="message"
@@ -151,7 +151,6 @@
             <property name="message" value="Trailing whitespace"/>
         </module>
 
-        <!-- Whitespace -->
         <module name="com.puppycrawl.tools.checkstyle.checks.whitespace.GenericWhitespaceCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.whitespace.MethodParamPadCheck"/>
         <module name="com.puppycrawl.tools.checkstyle.checks.whitespace.NoWhitespaceAfterCheck">
@@ -166,5 +165,4 @@
 
     </module>
 </module>
-
 

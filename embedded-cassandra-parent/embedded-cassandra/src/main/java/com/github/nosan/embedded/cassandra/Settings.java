@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,122 +16,140 @@
 
 package com.github.nosan.embedded.cassandra;
 
-import javax.annotation.Nullable;
-
+import java.net.InetAddress;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * Configuration properties for the {@link Cassandra}.
  *
  * @author Dmytro Nosan
- * @since 1.0.0
+ * @since 2.0.0
  */
 public interface Settings {
 
 	/**
-	 * The name of the cluster. This is mainly used to prevent machines in
-	 * one logical cluster from joining another.
+	 * Returns the {@link Version version}.
 	 *
-	 * @return The value of the {@code clusterName} attribute
+	 * @return a version
 	 */
-	@Nullable
-	String getClusterName();
+	Version getVersion();
 
 	/**
-	 * The port for inter-node communication.
+	 * The address to listen for the clients on.
 	 *
-	 * @return The value of the {@code storagePort} attribute or {@code -1}
+	 * @return the address, or {@code empty} if transports are not started
+	 * @see #getAddress()
+	 * @since 2.0.1
 	 */
-	int getStoragePort();
+	default Optional<InetAddress> address() {
+		return Optional.empty();
+	}
 
 	/**
-	 * SSL port, for encrypted communication.
+	 * The port for client connections.
 	 *
-	 * @return The value of the {@code sslStoragePort} attribute or {@code -1}
+	 * @return the port, or {@code empty} if transport is not started
+	 * @see #getPort()
+	 * @since 2.0.1
 	 */
-	int getSslStoragePort();
+	default Optional<Integer> port() {
+		return Optional.empty();
+	}
 
 	/**
-	 * Address to bind to and tell other Cassandra nodes to connect to.
+	 * SSL port for client connections.
 	 *
-	 * @return The value of the {@code listenAddress} attribute
+	 * @return SSL port, or {@code empty} if SSL transport is not started
+	 * @see #getSslPort()
+	 * @since 2.0.1
 	 */
-	@Nullable
-	String getListenAddress();
+	default Optional<Integer> sslPort() {
+		return Optional.empty();
+	}
 
 	/**
-	 * The interface that Cassandra binds to for connecting to other Cassandra nodes.
+	 * RPC port for client connections.
 	 *
-	 * @return The value of the {@code listenInterface} attribute
+	 * @return RPC port, or {@code empty} if RPC transport is not started
+	 * @see #getRpcPort()
+	 * @since 2.0.1
 	 */
-	@Nullable
-	String getListenInterface();
+	default Optional<Integer> rpcPort() {
+		return Optional.empty();
+	}
 
 	/**
-	 * The IP address a node tells other nodes in the cluster to contact it by.
+	 * The port or SSL port for client connections.
 	 *
-	 * @return The value of the {@code broadcastAddress} attribute
+	 * @return the port, or {@code empty} if transport is not started
+	 * @see #port()
+	 * @see #sslPort()
+	 * @see #getPortOrSslPort()
+	 * @since 2.0.2
 	 */
-	@Nullable
-	String getBroadcastAddress();
+	default Optional<Integer> portOrSslPort() {
+		Integer port = port().orElse(null);
+		if (port != null) {
+			return Optional.of(port);
+		}
+		return sslPort();
+	}
 
 	/**
-	 * The address to bind the native transport server to.
+	 * The address to listen for the clients on.
 	 *
-	 * @return The value of the {@code address} attribute
+	 * @return the address
+	 * @throws NoSuchElementException if address is not present
+	 * @see #address()
 	 */
-	@Nullable
-	String getAddress();
+	default InetAddress getAddress() throws NoSuchElementException {
+		return address().orElseThrow(() -> new NoSuchElementException("Address is not present"));
+	}
 
 	/**
-	 * The listen RPC interface for client connections.
+	 * The port for client connections.
 	 *
-	 * @return The value of the {@code rpcInterface} attribute
+	 * @return the port
+	 * @throws NoSuchElementException if port is not present
+	 * @see #port()
 	 */
-	@Nullable
-	String getRpcInterface();
+	default int getPort() throws NoSuchElementException {
+		return port().orElseThrow(() -> new NoSuchElementException("Port is not present"));
+	}
 
 	/**
-	 * RPC address to broadcast to drivers and other Cassandra nodes.
+	 * SSL port for client connections.
 	 *
-	 * @return The value of the {@code broadcastRpcAddress} attribute
+	 * @return SSL port
+	 * @throws NoSuchElementException if SSL port is not present
+	 * @see #sslPort()
 	 */
-	@Nullable
-	String getBroadcastRpcAddress();
+	default int getSslPort() throws NoSuchElementException {
+		return sslPort().orElseThrow(() -> new NoSuchElementException("SSL port is not present"));
+	}
 
 	/**
-	 * Whether native transport is started or not.
+	 * The port or SSL port for client connections.
 	 *
-	 * @return The value of the {@code startNativeTransport} attribute
+	 * @return the port
+	 * @throws NoSuchElementException if port or ssl port are not present
+	 * @see #portOrSslPort()
+	 * @since 2.0.2
 	 */
-	boolean isStartNativeTransport();
+	default int getPortOrSslPort() throws NoSuchElementException {
+		return portOrSslPort().orElseThrow(() -> new NoSuchElementException("Port and SSL port are not present"));
+	}
 
 	/**
-	 * Port for the CQL native transport to listen for clients on.
+	 * RPC port for client connections.
 	 *
-	 * @return The value of the {@code nativeTransportPort} attribute or {@code -1}
+	 * @return RPC port
+	 * @throws NoSuchElementException if RPC port is not present
+	 * @see #rpcPort()
 	 */
-	int getPort();
-
-	/**
-	 * SSL Port for the CQL native transport.
-	 *
-	 * @return The value of the {@code nativeTransportPortSsl} attribute
-	 */
-	@Nullable
-	Integer getSslPort();
-
-	/**
-	 * Whether RPC transport is started or not.
-	 *
-	 * @return The value of the {@code startRpc} attribute
-	 */
-	boolean isStartRpc();
-
-	/**
-	 * Thrift port for client connections.
-	 *
-	 * @return The value of the {@code rpcPort} attribute or {@code -1}
-	 */
-	int getRpcPort();
+	default int getRpcPort() throws NoSuchElementException {
+		return rpcPort().orElseThrow(() -> new NoSuchElementException("RPC port is not present"));
+	}
 
 }

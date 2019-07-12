@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,13 +7,16 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.nosan</groupId>
     <artifactId>embedded-cassandra-project</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
+    <version>2.0.4-SNAPSHOT</version>
     <packaging>pom</packaging>
+
+    <description>Embedded Cassandra Project</description>
+    <name>Embedded Cassandra Project</name>
 
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -24,26 +28,31 @@
         </developer>
     </developers>
 
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/nosan/embedded-cassandra/issues</url>
+    </issueManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <assertj.version>3.8.0</assertj.version>
+        <assertj.version>3.12.2</assertj.version>
         <junit.version>4.12</junit.version>
         <testng.version>6.14.3</testng.version>
-        <cassandra-driver-core.version>3.6.0</cassandra-driver-core.version>
-        <junit.jupiter.version>5.1.1</junit.jupiter.version>
-        <junit.platform.version>1.1.1</junit.platform.version>
-        <checkstyle.version>8.8</checkstyle.version>
-        <slf4j-api.version>1.7.25</slf4j-api.version>
+        <cassandra-driver-core.version>3.7.1</cassandra-driver-core.version>
+        <junit.jupiter.version>5.5.0</junit.jupiter.version>
+        <checkstyle.version>8.22</checkstyle.version>
+        <slf4j-api.version>1.7.26</slf4j-api.version>
         <logback-classic.version>1.2.3</logback-classic.version>
-        <spring.version>5.1.0.RELEASE</spring.version>
+        <spring.version>5.1.8.RELEASE</spring.version>
         <jsr305.version>3.0.2</jsr305.version>
-        <snakeyaml.version>1.23</snakeyaml.version>
+        <snakeyaml.version>1.24</snakeyaml.version>
         <commons-compress.version>1.18</commons-compress.version>
+        <xz.version>1.8</xz.version>
+        <spring-boot.version>2.1.6.RELEASE</spring-boot.version>
+        <java-driver-core.version>4.1.0</java-driver-core.version>
     </properties>
-
 
     <dependencyManagement>
         <dependencies>
@@ -56,6 +65,26 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-cassandra</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-cassandra-reactive</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring-boot.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -79,11 +108,6 @@
             </dependency>
             <dependency>
                 <groupId>com.github.nosan</groupId>
-                <artifactId>embedded-cassandra-junit</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.github.nosan</groupId>
                 <artifactId>embedded-cassandra-test-support</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -91,6 +115,11 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.datastax.oss</groupId>
+                <artifactId>java-driver-core</artifactId>
+                <version>${java-driver-core.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.datastax.cassandra</groupId>
@@ -102,7 +131,6 @@
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
@@ -138,12 +166,20 @@
                 <artifactId>jsr305</artifactId>
                 <version>${jsr305.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.tukaani</groupId>
+                <artifactId>xz</artifactId>
+                <version>${xz.version}</version>
+            </dependency>
         </dependencies>
-
-
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -154,19 +190,12 @@
             <artifactId>logback-classic</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <optional>true</optional>
-        </dependency>
     </dependencies>
-
 
     <build>
 
         <pluginManagement>
             <plugins>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
@@ -179,7 +208,6 @@
                         </dependency>
                     </dependencies>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
@@ -200,13 +228,11 @@
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>3.0.1</version>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>1.6</version>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
@@ -233,16 +259,13 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.20</version>
+                    <version>2.22.1</version>
                     <configuration>
-                        <reportFormat>brief</reportFormat>
+                        <skipAfterFailureCount>1</skipAfterFailureCount>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                        <useFile>true</useFile>
-                        <disableXmlReport>true</disableXmlReport>
-                        <reuseForks>true</reuseForks>
                         <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                         <failIfNoTests>false</failIfNoTests>
-                        <trimStackTrace>false</trimStackTrace>
+                        <argLine>-Xms256m -Xmx512m</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -250,20 +273,16 @@
                     <artifactId>maven-source-plugin</artifactId>
                     <version>3.0.1</version>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.0.1</version>
                 </plugin>
-
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.0.2</version>
                 </plugin>
-
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>flatten-maven-plugin</artifactId>
@@ -278,13 +297,10 @@
                         </pomElements>
                     </configuration>
                 </plugin>
-
             </plugins>
         </pluginManagement>
 
         <plugins>
-
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
@@ -311,7 +327,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-source-plugin</artifactId>
                 <executions>
@@ -323,7 +338,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -335,8 +349,12 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <show>package</show>
+                    <failOnWarnings>true</failOnWarnings>
+                    <failOnError>true</failOnError>
+                </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -345,9 +363,21 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 
     <profiles>
         <profile>
@@ -379,13 +409,6 @@
                                 <phase>process-resources</phase>
                                 <goals>
                                     <goal>flatten</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>flatten-clean</id>
-                                <phase>clean</phase>
-                                <goals>
-                                    <goal>clean</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -420,6 +443,5 @@
         <module>embedded-cassandra-parent</module>
         <module>embedded-cassandra-tests</module>
     </modules>
-
 
 </project>

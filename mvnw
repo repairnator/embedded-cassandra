@@ -8,7 +8,7 @@
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#    https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
@@ -99,7 +99,7 @@ if [ -z "$M2_HOME" ] ; then
 fi
 
 # For Cygwin, ensure paths are in UNIX format before anything is touched
-if $cygwin ; then
+if ${cygwin} ; then
   [ -n "$M2_HOME" ] &&
     M2_HOME=`cygpath --unix "$M2_HOME"`
   [ -n "$JAVA_HOME" ] &&
@@ -108,13 +108,12 @@ if $cygwin ; then
     CLASSPATH=`cygpath --path --unix "$CLASSPATH"`
 fi
 
-# For Migwn, ensure paths are in UNIX format before anything is touched
-if $mingw ; then
+# For Mingw, ensure paths are in UNIX format before anything is touched
+if ${mingw} ; then
   [ -n "$M2_HOME" ] &&
     M2_HOME="`(cd "$M2_HOME"; pwd)`"
   [ -n "$JAVA_HOME" ] &&
     JAVA_HOME="`(cd "$JAVA_HOME"; pwd)`"
-  # TODO classpath?
 fi
 
 if [ -z "$JAVA_HOME" ]; then
@@ -123,7 +122,7 @@ if [ -z "$JAVA_HOME" ]; then
     # readlink(1) is not available as standard on Solaris 10.
     readLink=`which readlink`
     if [ ! `expr "$readLink" : '\([^ ]*\)'` = "no" ]; then
-      if $darwin ; then
+      if ${darwin} ; then
         javaHome="`dirname \"$javaExecutable\"`"
         javaExecutable="`cd \"$javaHome\" && pwd -P`/javac"
       else
@@ -176,7 +175,7 @@ find_maven_basedir() {
   wdir="$1"
   while [ "$wdir" != '/' ] ; do
     if [ -d "$wdir"/.mvn ] ; then
-      basedir=$wdir
+      basedir=${wdir}
       break
     fi
     # workaround for JBEAP-8937 (on Solaris 10/Sparc)
@@ -200,12 +199,52 @@ if [ -z "$BASE_DIR" ]; then
   exit 1;
 fi
 
+##########################################################################################
+# Extension to allow automatically downloading the maven-wrapper.jar from Maven-central
+# This allows using the maven wrapper in projects that prohibit checking in binary data.
+##########################################################################################
+if [ -r "$BASE_DIR/.mvn/wrapper/maven-wrapper.jar" ]; then
+    if [ "$MVNW_VERBOSE" = true ]; then
+      echo "Found .mvn/wrapper/maven-wrapper.jar"
+    fi
+else
+    if [ "$MVNW_VERBOSE" = true ]; then
+      echo "Couldn't find .mvn/wrapper/maven-wrapper.jar, downloading it ..."
+    fi
+    jarUrl="https://repo.maven.apache.org/maven2/io/takari/maven-wrapper/0.4.2/maven-wrapper-0.4.2.jar"
+    while IFS="=" read key value; do
+      case "$key" in (wrapperUrl) jarUrl="$value"; break ;;
+      esac
+    done < "$BASE_DIR/.mvn/wrapper/maven-wrapper.properties"
+    if [ "$MVNW_VERBOSE" = true ]; then
+      echo "Downloading from: $jarUrl"
+    fi
+    wrapperJarPath="$BASE_DIR/.mvn/wrapper/maven-wrapper.jar"
+
+    if command -v wget > /dev/null; then
+        if [ "$MVNW_VERBOSE" = true ]; then
+          echo "Found wget ... using wget"
+        fi
+        wget "$jarUrl" -O "$wrapperJarPath"
+    elif command -v curl > /dev/null; then
+        if [ "$MVNW_VERBOSE" = true ]; then
+          echo "Found curl ... using curl"
+        fi
+        curl -o "$wrapperJarPath" "$jarUrl"
+    fi
+fi
+##########################################################################################
+# End of extension
+##########################################################################################
+
 export MAVEN_PROJECTBASEDIR=${MAVEN_BASEDIR:-"$BASE_DIR"}
-echo $MAVEN_PROJECTBASEDIR
+if [ "$MVNW_VERBOSE" = true ]; then
+  echo ${MAVEN_PROJECTBASEDIR}
+fi
 MAVEN_OPTS="$(concat_lines "$MAVEN_PROJECTBASEDIR/.mvn/jvm.config") $MAVEN_OPTS"
 
 # For Cygwin, switch paths to Windows format before running java
-if $cygwin; then
+if ${cygwin}; then
   [ -n "$M2_HOME" ] &&
     M2_HOME=`cygpath --path --windows "$M2_HOME"`
   [ -n "$JAVA_HOME" ] &&
@@ -219,7 +258,7 @@ fi
 WRAPPER_LAUNCHER=org.apache.maven.wrapper.MavenWrapperMain
 
 exec "$JAVACMD" \
-  $MAVEN_OPTS \
+  ${MAVEN_OPTS} \
   -classpath "$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar" \
   "-Dmaven.home=${M2_HOME}" "-Dmaven.multiModuleProjectDirectory=${MAVEN_PROJECTBASEDIR}" \
-  ${WRAPPER_LAUNCHER} $MAVEN_CONFIG "$@"
+  ${WRAPPER_LAUNCHER} ${MAVEN_CONFIG} "$@"

@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,11 +18,9 @@ package com.github.nosan.embedded.cassandra.cql;
 
 import java.io.File;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,46 +29,43 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Dmytro Nosan
  */
-public class CqlScriptTests {
-
+class CqlScriptTests {
 
 	@Test
-	public void classpaths() {
-		assertThat(CqlScript.classpath((String[]) null)).isNotNull();
+	void assertClasspathPatterns() {
+		assertStatements(CqlScript.classpathPatterns("roles.cql"));
+		assertStatements(CqlScript.classpathPatterns("*.cql"));
+	}
+
+	@Test
+	void assertClasspath() {
 		assertStatements(CqlScript.classpath("roles.cql"));
-		assertStatements(CqlScript.classpath(getClass(), "/roles.cql"));
-	}
-
-
-	@Test
-	public void urls() {
-		assertThat(CqlScript.urls((URL[]) null)).isNotNull();
-		assertStatements(CqlScript.urls(ClassLoader.getSystemResource("roles.cql")));
-	}
-
-
-	@Test
-	public void files() throws URISyntaxException {
-		assertThat(CqlScript.files((File[]) null)).isNotNull();
-		assertStatements(CqlScript.files(new File(ClassLoader.getSystemResource("roles.cql").toURI())));
 	}
 
 	@Test
-	public void paths() throws URISyntaxException {
-		assertThat(CqlScript.paths((Path[]) null)).isNotNull();
-		assertStatements(CqlScript.paths(Paths.get(ClassLoader.getSystemResource("roles.cql").toURI())));
+	void assertUrls() {
+		assertStatements(CqlScript.urls(getClass().getResource("/roles.cql")));
+	}
+
+	@Test
+	void assertFiles() throws URISyntaxException {
+		assertStatements(CqlScript.files(new File(getClass().getResource("/roles.cql").toURI())));
+	}
+
+	@Test
+	void assertPaths() throws URISyntaxException {
+		assertStatements(CqlScript.paths(Paths.get(getClass().getResource("/roles.cql").toURI())));
 
 	}
 
 	@Test
-	public void statements() {
-		assertThat(CqlScript.statements((String[]) null)).isNotNull();
+	void assertStatements() {
 		assertStatements(CqlScript.statements("CREATE TABLE IF NOT EXISTS test.roles (id text PRIMARY KEY)"));
 	}
-
 
 	private static void assertStatements(CqlScript script) {
 		assertThat(script.getStatements())
 				.containsExactly("CREATE TABLE IF NOT EXISTS test.roles (id text PRIMARY KEY)");
 	}
+
 }

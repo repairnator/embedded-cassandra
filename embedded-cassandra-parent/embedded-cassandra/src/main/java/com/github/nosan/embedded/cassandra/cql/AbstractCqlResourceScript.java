@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,27 +16,24 @@
 
 package com.github.nosan.embedded.cassandra.cql;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
+import java.util.List;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import com.github.nosan.embedded.cassandra.util.StreamUtils;
-
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
 
 /**
- * Base class for {@link AbstractCqlScript} implementations,
- * pre-implementing {@link #getScript()} method.
+ * Abstract {@link CqlScript} implementation, that pre-implemented {@link #getStatements()}.
  *
  * @author Dmytro Nosan
  * @since 1.0.0
  */
-public abstract class AbstractCqlResourceScript extends AbstractCqlScript {
+public abstract class AbstractCqlResourceScript implements CqlScript {
 
-	@Nonnull
 	private final Charset encoding;
 
 	/**
@@ -48,22 +45,9 @@ public abstract class AbstractCqlResourceScript extends AbstractCqlScript {
 		this.encoding = (encoding != null) ? encoding : Charset.defaultCharset();
 	}
 
-
-	/**
-	 * {@inheritDoc}
-	 *
-	 * @throws UncheckedIOException if an I/O error occurs
-	 */
-	@Nonnull
 	@Override
-	protected final String getScript() {
-		try {
-			return StreamUtils.toString(getInputStream(), getEncoding());
-		}
-		catch (IOException ex) {
-			throw new UncheckedIOException(String.format("Could not open a stream for CQL Script (%s)", toString()),
-					ex);
-		}
+	public List<String> getStatements() {
+		return CqlScriptParser.parse(getScript());
 	}
 
 	/**
@@ -71,9 +55,8 @@ public abstract class AbstractCqlResourceScript extends AbstractCqlScript {
 	 * <p>It is expected that each call creates a <i>fresh</i> stream.
 	 *
 	 * @return the input stream for the underlying resource
-	 * @throws IOException if the content stream could not be opened
+	 * @throws IOException if the content stream can not be opened
 	 */
-	@Nonnull
 	protected abstract InputStream getInputStream() throws IOException;
 
 	/**
@@ -81,9 +64,28 @@ public abstract class AbstractCqlResourceScript extends AbstractCqlScript {
 	 *
 	 * @return encoding to use.
 	 */
-	@Nonnull
 	protected final Charset getEncoding() {
 		return this.encoding;
+	}
+
+	private static byte[] toByteArray(InputStream inputStream) throws IOException {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		byte[] buf = new byte[8192];
+		int read;
+		while ((read = inputStream.read(buf)) > 0) {
+			outputStream.write(buf, 0, read);
+		}
+		return outputStream.toByteArray();
+	}
+
+	private String getScript() {
+		try (InputStream is = new BufferedInputStream(getInputStream())) {
+			return new String(toByteArray(is), getEncoding());
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(String.format("Can not open a stream for CQL Script '%s'", toString()),
+					ex);
+		}
 	}
 
 }

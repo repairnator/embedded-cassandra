@@ -7,14 +7,17 @@
     <parent>
         <groupId>com.github.nosan</groupId>
         <artifactId>embedded-cassandra-parent</artifactId>
-        <version>1.0.3-SNAPSHOT</version>
+        <version>2.0.4-SNAPSHOT</version>
     </parent>
 
     <description>
-        This module contains core items that can be helpful when testing your `Cassandra`
+        This module contains core items that can be helpful when testing your code against `Apache Cassandra`
     </description>
+
     <name>Embedded Cassandra Test</name>
+
     <url>https://github.com/nosan/embedded-cassandra</url>
+
     <scm>
         <url>https://github.com/nosan/embedded-cassandra.git</url>
     </scm>
@@ -25,11 +28,6 @@
         <dependency>
             <groupId>com.github.nosan</groupId>
             <artifactId>embedded-cassandra</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.nosan</groupId>
-            <artifactId>embedded-cassandra-test-support</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -57,6 +55,11 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>com.datastax.oss</groupId>
+            <artifactId>java-driver-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>com.datastax.cassandra</groupId>
             <artifactId>cassandra-driver-core</artifactId>
             <optional>true</optional>
@@ -71,6 +74,11 @@
             <artifactId>spring-context</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.github.nosan</groupId>
+            <artifactId>embedded-cassandra-test-support</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -78,7 +86,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
-                <inherited>true</inherited>
                 <configuration>
                     <skip>false</skip>
                 </configuration>

@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,42 +17,61 @@
 package com.github.nosan.embedded.cassandra;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
+import com.github.nosan.embedded.cassandra.util.StringUtils;
 
 /**
- * Simple class to represent {@link Cassandra} version.
+ * A simple class to represent the version.
  *
  * @author Dmytro Nosan
+ * @see #parse(String)
  * @since 1.0.0
  */
 public final class Version implements Comparable<Version> {
 
-	private static final Pattern VERSION =
-			Pattern.compile("^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$");
+	private static final Pattern VERSION_PATTERN = Pattern.compile("^([0-9]+)(\\.([0-9]+))(\\.([0-9]+))?.*$");
+
+	private final String version;
 
 	private final int major;
 
 	private final int minor;
 
-	private final int patch;
+	@Nullable
+	private final Integer patch;
 
-	/**
-	 * Creates a {@link Version}.
-	 *
-	 * @param major a major value
-	 * @param minor a minor value
-	 * @param patch a patch value
-	 */
-	public Version(int major, int minor, int patch) {
+	private Version(int major, int minor, @Nullable Integer patch, String version) {
 		this.major = major;
 		this.minor = minor;
 		this.patch = patch;
+		this.version = version;
 	}
 
+	/**
+	 * Parses a {@code version}.
+	 *
+	 * @param version a version
+	 * @return a {@link Version}
+	 */
+	public static Version parse(String version) {
+		Objects.requireNonNull(version, "Version must not be null");
+		Matcher matcher = VERSION_PATTERN.matcher(version.trim());
+		if (matcher.find()) {
+			int major = Integer.parseInt(matcher.group(1));
+			int minor = Integer.parseInt(matcher.group(3));
+			Integer patch = null;
+			String patchGroup = matcher.group(5);
+			if (StringUtils.hasText(patchGroup)) {
+				patch = Integer.parseInt(patchGroup);
+			}
+			return new Version(major, minor, patch, matcher.group(0));
+		}
+		throw new IllegalArgumentException(String.format("Version '%s' is invalid.", version));
+	}
 
 	/**
 	 * Returns a major value.
@@ -73,17 +92,12 @@ public final class Version implements Comparable<Version> {
 	}
 
 	/**
-	 * Returns a patch value.
+	 * Returns a patch value, or empty.
 	 *
-	 * @return The value of the {@code patch} attribute
+	 * @return The value of the {@code patch} attribute, or empty
 	 */
-	public int getPatch() {
-		return this.patch;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(this.major, this.minor, this.patch);
+	public Optional<Integer> getPatch() {
+		return Optional.ofNullable(this.patch);
 	}
 
 	@Override
@@ -94,49 +108,36 @@ public final class Version implements Comparable<Version> {
 		if (other == null || getClass() != other.getClass()) {
 			return false;
 		}
-		Version version = (Version) other;
-		return this.major == version.major &&
-				this.minor == version.minor &&
-				this.patch == version.patch;
+		Version v = (Version) other;
+		return this.version.equals(v.version);
 	}
 
 	@Override
-	@Nonnull
+	public int hashCode() {
+		return Objects.hash(this.version);
+	}
+
+	@Override
 	public String toString() {
-		return String.format("%s.%s.%s", this.major, this.minor, this.patch);
+		return this.version;
 	}
 
 	@Override
-	public int compareTo(@Nonnull Version other) {
-		int major = Integer.compare(this.major, other.major);
-		if (major == 0) {
-			int minor = Integer.compare(this.minor, other.minor);
-			if (minor == 0) {
-				return Integer.compare(this.patch, other.patch);
+	public int compareTo(Version other) {
+		Objects.requireNonNull(other, "Version must not be null");
+		int majorCmp = Integer.compare(getMajor(), other.getMajor());
+		if (majorCmp == 0) {
+			int minCmp = Integer.compare(getMinor(), other.getMinor());
+			if (minCmp == 0) {
+				int patchCmp = Integer.compare(getPatch().orElse(-1), other.getPatch().orElse(-1));
+				if (patchCmp == 0) {
+					return this.version.compareTo(other.version);
+				}
+				return patchCmp;
 			}
-			return minor;
+			return minCmp;
 		}
-		return major;
-	}
-
-	/**
-	 * Parses a {@code version}.
-	 *
-	 * @param version a version (expected format ({@code int.int.int}))
-	 * @return a parsed {@link Version}
-	 */
-	@Nonnull
-	public static Version parse(@Nonnull String version) {
-		Objects.requireNonNull(version, "Version must not be null");
-		Matcher matcher = VERSION.matcher(version);
-		if (matcher.find()) {
-			int major = Integer.parseInt(matcher.group(1));
-			int minor = Integer.parseInt(matcher.group(2));
-			int patch = Integer.parseInt(matcher.group(3));
-			return new Version(major, minor, patch);
-		}
-		throw new IllegalArgumentException(String.format("Version (%s) is invalid. Expected format is (int.int.int)",
-				version));
+		return majorCmp;
 	}
 
 }

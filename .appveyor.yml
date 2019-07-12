@@ -1,20 +1,20 @@
 version: "{build}"
 image: Visual Studio 2017
 
-build:
-  verbosity: detailed
-
 environment:
   matrix:
-  - JAVA_HOME: C:/Program Files/Java/jdk1.8.0
+    - JAVA_HOME: C:/Program Files/Java/jdk1.8.0
 
+before_build:
+  - mvnw.cmd clean install -B -V -DskipTests
 
 build_script:
-- java -version
-- mvnw.cmd -B clean install -DCASSANDRA.CI.BUILD=true
+  - mvnw.cmd clean install
 
 on_failure:
-- cat **/**/target/surefire-reports/*.txt
+  - ps: |
+      7z a -r surefire-reports.zip '**\target\surefire-reports\*'
+      Push-AppveyorArtifact surefire-reports.zip -DeploymentName 'Surefire Reports'
 
 cache:
-- C:/Users/appveyor/.m2
+  - C:/Users/appveyor/.m2

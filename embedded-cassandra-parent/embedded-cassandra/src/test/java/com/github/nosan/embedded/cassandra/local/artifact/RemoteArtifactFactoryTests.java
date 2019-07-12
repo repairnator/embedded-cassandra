@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,13 +21,10 @@ import java.net.Proxy;
 import java.net.URL;
 import java.time.Duration;
 
-import javax.annotation.Nonnull;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.nosan.embedded.cassandra.Version;
 import com.github.nosan.embedded.cassandra.test.support.ReflectionUtils;
-import com.github.nosan.embedded.cassandra.util.FileUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,47 +33,35 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Dmytro Nosan
  */
-public class RemoteArtifactFactoryTests {
+class RemoteArtifactFactoryTests {
 
 	@Test
-	public void createConfigureRemoteArtifact() {
+	void createConfigureRemoteArtifact() {
 		RemoteArtifactFactory factory = new RemoteArtifactFactory();
 		Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("locahost", 8080));
-		UrlFactory urlFactory = new UrlFactory() {
-			@Nonnull
-			@Override
-			public URL[] create(@Nonnull Version version) {
-				return null;
-			}
-		};
-
+		UrlFactory urlFactory = version -> new URL[0];
 		factory.setUrlFactory(urlFactory);
 		factory.setProxy(proxy);
-		factory.setDirectory(FileUtils.getTmpDirectory());
 		factory.setReadTimeout(Duration.ofSeconds(100));
 		factory.setConnectTimeout(Duration.ofMinutes(100));
 
-
-		RemoteArtifact artifact = (RemoteArtifact) factory.create(new Version(3, 11, 2));
-		assertThat(ReflectionUtils.getField(artifact, "version")).isEqualTo(new Version(3, 11, 2));
-		assertThat(ReflectionUtils.getField(artifact, "directory")).isEqualTo(FileUtils.getTmpDirectory());
+		RemoteArtifact artifact = (RemoteArtifact) factory.create(Version.parse("3.11.2"));
+		assertThat(ReflectionUtils.getField(artifact, "version")).isEqualTo(Version.parse("3.11.2"));
 		assertThat(ReflectionUtils.getField(artifact, "urlFactory")).isEqualTo(urlFactory);
 		assertThat(ReflectionUtils.getField(artifact, "proxy")).isEqualTo(proxy);
 		assertThat(ReflectionUtils.getField(artifact, "readTimeout")).isEqualTo(Duration.ofSeconds(100));
 		assertThat(ReflectionUtils.getField(artifact, "connectTimeout")).isEqualTo(Duration.ofMinutes(100));
-
 	}
 
 	@Test
-	public void createDefaultRemoteArtifact() {
+	void createDefaultRemoteArtifact() {
 		RemoteArtifactFactory factory = new RemoteArtifactFactory();
-		RemoteArtifact artifact = (RemoteArtifact) factory.create(new Version(3, 11, 3));
-		assertThat(ReflectionUtils.getField(artifact, "version")).isEqualTo(new Version(3, 11, 3));
-		assertThat(ReflectionUtils.getField(artifact, "directory")).isEqualTo(FileUtils.getUserHomeDirectory());
+		RemoteArtifact artifact = (RemoteArtifact) factory.create(Version.parse("3.11.3"));
+		assertThat(ReflectionUtils.getField(artifact, "version")).isEqualTo(Version.parse("3.11.3"));
 		assertThat(ReflectionUtils.getField(artifact, "urlFactory")).isInstanceOf(DefaultUrlFactory.class);
 		assertThat(ReflectionUtils.getField(artifact, "proxy")).isNull();
-		assertThat(ReflectionUtils.getField(artifact, "readTimeout")).isNull();
-		assertThat(ReflectionUtils.getField(artifact, "connectTimeout")).isNull();
-
+		assertThat(ReflectionUtils.getField(artifact, "readTimeout")).isEqualTo(Duration.ofSeconds(30));
+		assertThat(ReflectionUtils.getField(artifact, "connectTimeout")).isEqualTo(Duration.ofSeconds(30));
 	}
+
 }

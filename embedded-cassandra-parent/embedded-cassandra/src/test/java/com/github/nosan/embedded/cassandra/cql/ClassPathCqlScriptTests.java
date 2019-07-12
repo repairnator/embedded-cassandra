@@ -1,11 +1,11 @@
 /*
- * Copyright 2018-2018 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,66 +17,71 @@
 package com.github.nosan.embedded.cassandra.cql;
 
 import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import com.github.nosan.embedded.cassandra.lang.annotation.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link ClassPathCqlScript}.
  *
  * @author Dmytro Nosan
  */
-public class ClassPathCqlScriptTests {
+class ClassPathCqlScriptTests {
 
+	private static final String ROLES = "/roles.cql";
+
+	private static final String KEYSPACE = "keyspace.cql";
 
 	@Test
-	public void getStatementsWithClassloader() {
-		ClassPathCqlScript classPathCqlScript = new ClassPathCqlScript("roles.cql");
-		assertThat(classPathCqlScript.getStatements())
+	void assertStatements() {
+		assertThat(classpath(ROLES).getStatements())
 				.containsExactly("CREATE TABLE IF NOT EXISTS test.roles (id text PRIMARY KEY)");
+		assertThat(classpath(KEYSPACE).getStatements()).containsExactly(
+				"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class':'SimpleStrategy', "
+						+ "'replication_factor':1}");
 	}
 
 	@Test
-	public void getStatementsWithClassLoaderAndLeadingSlash() {
-		ClassPathCqlScript classPathCqlScript = new ClassPathCqlScript("/roles.cql");
-		assertThat(classPathCqlScript.getStatements())
-				.containsExactly("CREATE TABLE IF NOT EXISTS test.roles (id text PRIMARY KEY)");
+	void assertHashCode() {
+		assertThat(classpath(ROLES)).hasSameHashCodeAs(classpath(ROLES));
+		assertThat(classpath(ROLES).hashCode()).isNotEqualTo(classpath(KEYSPACE).hashCode());
 	}
 
 	@Test
-	public void getStatementsWithClass() {
-		ClassPathCqlScript classPathCqlScript = new ClassPathCqlScript("keyspace.cql", getClass());
-		assertThat(classPathCqlScript.getStatements()).containsExactly(
-				"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class':'SimpleStrategy', " +
-						"'replication_factor':1}");
+	void assertEquals() {
+		ClassLoader classLoader = getClass().getClassLoader();
+		assertThat(classpath(ROLES)).isEqualTo(classpath(ROLES)).isNotEqualTo(classpath(ROLES, StandardCharsets.UTF_16))
+				.isNotEqualTo(classpath(KEYSPACE));
+		assertThat(classpath(KEYSPACE))
+				.isEqualTo(classpath("com/github/nosan/embedded/cassandra/cql/keyspace.cql", classLoader));
 	}
 
 	@Test
-	public void getStatementsWithLeadingClass() {
-		ClassPathCqlScript classPathCqlScript = new ClassPathCqlScript("/roles.cql", getClass());
-		assertThat(classPathCqlScript.getStatements())
-				.containsExactly("CREATE TABLE IF NOT EXISTS test.roles (id text PRIMARY KEY)");
+	void assertToString() {
+		assertThat(classpath(ROLES).toString()).contains("roles.cql");
 	}
 
 	@Test
-	public void helpers() {
-		assertThat(new ClassPathCqlScript("/roles.cql", getClass()))
-				.isEqualTo(new ClassPathCqlScript("/roles.cql"));
-
-		assertThat(new ClassPathCqlScript("/hz.cql", getClass()))
-				.isNotEqualTo(new ClassPathCqlScript("/hz.cql"));
-
-		assertThat(new ClassPathCqlScript("/roles.cql", getClass(), StandardCharsets.UTF_16LE))
-				.isNotEqualTo(new ClassPathCqlScript("/roles.cql", getClass()));
-
-		assertThat(new ClassPathCqlScript("/roles.cql").toString())
-				.contains("roles.cql");
+	void assertExceptionThrown() {
+		assertThatThrownBy(classpath("/invalid.cql")::getStatements).isInstanceOf(UncheckedIOException.class);
 	}
 
-	@Test(expected = UncheckedIOException.class)
-	public void invalidResource() {
-		new ClassPathCqlScript("/hz.cql").getStatements();
+	private ClassPathCqlScript classpath(String location, @Nullable Charset charset) {
+		return new ClassPathCqlScript(location, getClass(), charset);
 	}
+
+	private ClassPathCqlScript classpath(String location) {
+		return new ClassPathCqlScript(location, getClass());
+	}
+
+	private ClassPathCqlScript classpath(String location, ClassLoader classLoader) {
+		return new ClassPathCqlScript(location, classLoader);
+	}
+
 }
